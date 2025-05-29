@@ -1,0 +1,37 @@
+(1) Azure Entra App Registration (Service Principal)
+    (a) Copy the Application (Client) ID
+    (b) Copy the Directory (Tenant) ID
+(2) Generate a secret/password for the Application
+    (a) Under application, click certificates and secrets
+    (b) Create new secret
+    (c) Copy the secret value
+(3) Create a key vault
+    (a) Add client ID, tenant ID, and secret value 
+(4) Create a secret scope
+    (a) Go to homepage of Databricks
+    (b) Add #secrets/createScope at end of url
+    (c) Under Key Vault, select properties
+        (1) Copy Vault URI (DNS Name), Resource ID
+    (d) If you forget the name of your secret scope, use dbutils.secrets.listScopes()
+(5) Cluster Scoped Credentials
+    (a) Go to Databricks, then compute, then the cluster
+    (b) Select edit
+    (c) Under Advanced Options
+        (1) fs.azure.account.key.((storage account name)).dfs.core.windows.net {{secrets/((secret scope name))/((secret name))}}
+(6) Mounting Container to Databricks
+    (a) Create notebook
+    (b) Create three assignments
+        (1) client_id = dbutils.secrets.get(scope = '((scope))', key = '((secret))')
+        (2) tenant_id = dbutils.secrets.get(scope = '((scope))', key = '((secret))')
+        (3) client_secret = dbutils.secrets.get(scope = '((scope))', key = '((secret))')
+    (c) Set Spark configs
+        (1) configs = {"fs.azure.account.auth.type": "OAuth",
+          "fs.azure.account.oauth.provider.type": "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider",
+          "fs.azure.account.oauth2.client.id": client_id,
+          "fs.azure.account.oauth2.client.secret": client_secret),
+          "fs.azure.account.oauth2.client.endpoint": f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"}
+    (d) Mount the container
+        (1) dbutils.fs.mount(
+                source = "abfss://<container-name>@<storage-account-name>.dfs.core.windows.net/",
+                mount_point = "/mnt/<mount-name>",
+                extra_configs = configs)
